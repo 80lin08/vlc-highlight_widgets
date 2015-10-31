@@ -26,16 +26,12 @@ I suppose, it should be suitable for use with VLC 3.x too.
 
 Widgets before:
 
-![old_0](https://raw.github.com/80lin08/vlc-highlight_widgets
-/master/screenshots/old_0.png)
+![old_0](https://raw.githubusercontent.com/80lin08/vlc-highlight_widgets/master/screenshots/old_0.png)
 
-![old_1](https://raw.github.com/80lin08/vlc-highlight_widgets
-/master/screenshots/old_1.png)
+![old_1](https://raw.githubusercontent.com/80lin08/vlc-highlight_widgets/master/screenshots/old_1.png)
 
 Widgets after:
 
-![new_0](https://raw.github.com/80lin08/vlc-highlight_widgets
-/master/screenshots/new_0.png)
+![new_0](https://raw.githubusercontent.com/80lin08/vlc-highlight_widgets/master/screenshots/new_0.png)
 
-![new_1](https://raw.github.com/80lin08/vlc-highlight_widgets
-/master/screenshots/new_1.png)
+![new_1](https://raw.githubusercontent.com/80lin08/vlc-highlight_widgets/master/screenshots/new_1.png)
