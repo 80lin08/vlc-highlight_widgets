@@ -1,0 +1,231 @@
+--- src/video_output/video_widgets.c	2014-06-14 18:14:17.000000000 +0300
++++ src/video_output/video_widgets.c	2014-06-14 18:14:17.000000000 +0300
+@@ -36,9 +36,27 @@
+ 
+ #include <vlc_filter.h>
+ 
++/* fill style enum */
+ #define STYLE_EMPTY 0
+ #define STYLE_FILLED 1
+ 
++/* overlay palette enum */
++#define P_WHITE 1
++#define P_BLACK 2
++
++
++/* Size of OSD Icon, relative to larger side of video frame */
++#define ICON_SIZE 0.08
++
++/* margin from top-right */
++#define ICON_MARGIN 0.07
++
++/* highlight white margin, relative to icon size */
++#define ICON_H_MARGIN 0.03
++
++/* global variable, defines current color */
++static uint8_t cur_color;
++
+ /**
+  * Draws a rectangle at the given position in the region.
+  * It may be filled (fill == STYLE_FILLED) or empty (fill == STYLE_EMPTY).
+@@ -52,16 +70,16 @@
+     if (fill == STYLE_FILLED) {
+         for (int y = y1; y <= y2; y++) {
+             for (int x = x1; x <= x2; x++)
+-                p[x + pitch * y] = 1;
++                p[x + pitch * y] = cur_color;
+         }
+     } else {
+         for (int y = y1; y <= y2; y++) {
+-            p[x1 + pitch * y] = 1;
+-            p[x2 + pitch * y] = 1;
++            p[x1 + pitch * y] = cur_color;
++            p[x2 + pitch * y] = cur_color;
+         }
+         for (int x = x1; x <= x2; x++) {
+-            p[x + pitch * y1] = 1;
+-            p[x + pitch * y2] = 1;
++            p[x + pitch * y1] = cur_color;
++            p[x + pitch * y2] = cur_color;
+         }
+     }
+ }
+@@ -83,17 +101,17 @@
+             for (int y = y1; y <= mid; y++) {
+                 int h = y - y1;
+                 for (int x = x1; x <= x1 + h && x <= x2; x++) {
+-                    p[x + pitch * y         ] = 1;
+-                    p[x + pitch * (y2 - h)] = 1;
++                    p[x + pitch * y         ] = cur_color;
++                    p[x + pitch * (y2 - h)] = cur_color;
+                 }
+             }
+         } else {
+             for (int y = y1; y <= mid; y++) {
+                 int h = y - y1;
+-                p[x1 +     pitch * y         ] = 1;
+-                p[x1 + h + pitch * y         ] = 1;
+-                p[x1 +     pitch * (y2 - h)] = 1;
+-                p[x1 + h + pitch * (y2 - h)] = 1;
++                p[x1 +     pitch * y         ] = cur_color;
++                p[x1 + h + pitch * y         ] = cur_color;
++                p[x1 +     pitch * (y2 - h)] = cur_color;
++                p[x1 + h + pitch * (y2 - h)] = cur_color;
+             }
+         }
+     } else {
+@@ -101,17 +119,17 @@
+             for (int y = y1; y <= mid; y++) {
+                 int h = y - y1;
+                 for (int x = x1; x >= x1 - h && x >= x2; x--) {
+-                    p[x + pitch * y       ] = 1;
+-                    p[x + pitch * (y2 - h)] = 1;
++                    p[x + pitch * y       ] = cur_color;
++                    p[x + pitch * (y2 - h)] = cur_color;
+                 }
+             }
+         } else {
+             for (int y = y1; y <= mid; y++) {
+                 int h = y - y1;
+-                p[ x1 +     pitch * y       ] = 1;
+-                p[ x1 - h + pitch * y       ] = 1;
+-                p[ x1 +     pitch * (y2 - h)] = 1;
+-                p[ x1 - h + pitch * (y2 - h)] = 1;
++                p[ x1 +     pitch * y       ] = cur_color;
++                p[ x1 - h + pitch * y       ] = cur_color;
++                p[ x1 +     pitch * (y2 - h)] = cur_color;
++                p[ x1 - h + pitch * (y2 - h)] = cur_color;
+             }
+         }
+     }
+@@ -123,10 +141,11 @@
+ static subpicture_region_t *OSDRegion(int x, int y, int width, int height)
+ {
+     video_palette_t palette = {
+-        .i_entries = 2,
++        .i_entries = 3,
+         .palette = {
+             [0] = { 0xff, 0x80, 0x80, 0x00 },
+-            [1] = { 0xff, 0x80, 0x80, 0xff },
++            [P_WHITE] = { 0xff, 0x80, 0x80, 0xff },
++            [P_BLACK] = { 0x00, 0x80, 0x80, 0xff },
+         },
+     };
+ 
+@@ -193,14 +212,69 @@
+     return r;
+ }
+ 
++
++/* margin assumes there IS margin, at least one pixel */
++static void DrawRect_margin(subpicture_region_t *r, int fill,
++                     int x1, int y1, int x2, int y2, int margin) {
++    if( margin < 1 ) margin = 1;
++    if( x1 + 2 * margin >= x2 ) return;
++    if( y1 + 2 * margin >= y2 ) return;
++	DrawRect( r, fill, x1 + margin, y1 + margin, x2 - margin, y2 - margin );
++}
++
++static void DrawTriangle_margin(subpicture_region_t *r, int fill,
++                         int x1, int y1, int x2, int y2, double margin) {
++    if( margin < 1 ) margin = 1;
++    int x_margin = margin;
++	if( x1 >= x2 ) x_margin = -margin;
++	else x_margin = margin;
++	if( (int)( y1 + 2.4142 * margin ) >= (int)( y2 - 2.4142 * margin ) ) return;
++	DrawTriangle( r, fill, x1 + (int)x_margin, y1 + 2.4142 * margin, x2 - (int)x_margin, y2 - 2.4142 * margin );
++
++}
++
++
++static void draw_pause_icon ( subpicture_region_t *r, int width, int height ) {
++        int bar_width = width / 3;
++        cur_color = P_WHITE;
++        DrawRect( r, STYLE_FILLED, 0, 0, bar_width - 1, height -1 );
++        DrawRect( r, STYLE_FILLED, width - bar_width, 0, width - 1, height - 1 );
++        cur_color = P_BLACK;
++        DrawRect_margin( r, STYLE_FILLED, 0, 0, bar_width - 1, height -1, width * ICON_H_MARGIN );
++        DrawRect_margin( r, STYLE_FILLED, width - bar_width, 0, width - 1, height - 1, width * ICON_H_MARGIN );
++}
++
++static void draw_play_icon ( subpicture_region_t *r, int width, int height ) {
++        int mid   = height >> 1;
++        int delta = (width - mid) >> 1;
++        int y2    = height - 1;
++        cur_color = P_WHITE;
++        DrawTriangle(r, STYLE_FILLED, delta, 0, width - delta, y2);
++        cur_color = P_BLACK;
++        DrawTriangle_margin(r, STYLE_FILLED, delta, 0, width - delta, y2, width * ICON_H_MARGIN);
++}
++
++static void draw_speaker_icon ( subpicture_region_t *r, int width, int height ) {
++    int mid   = height >> 1;
++    int delta = (width - mid) >> 1;
++    int y2    = height - 1;
++    cur_color = P_WHITE;
++    DrawRect(r, STYLE_FILLED, delta, mid / 2, width - delta, height - 1 - mid / 2);
++    DrawTriangle(r, STYLE_FILLED, width - delta, 0, delta, y2);
++    
++    cur_color = P_BLACK;
++    DrawRect_margin(r, STYLE_FILLED, delta, mid / 2, width - delta, height - 1 - mid / 2, width * ICON_H_MARGIN );
++    DrawTriangle_margin(r, STYLE_FILLED, width - delta, 0, delta, y2, width * ICON_H_MARGIN );
++}
++ 
+ /**
+  * Create the region for an OSD slider.
+  * Types are: OSD_PLAY_ICON, OSD_PAUSE_ICON, OSD_SPEAKER_ICON, OSD_MUTE_ICON
+  */
+ static subpicture_region_t *OSDIcon(int type, const video_format_t *fmt)
+ {
+-    const float size_ratio   = 0.05;
+-    const float margin_ratio = 0.07;
++    const float size_ratio   = ICON_SIZE;
++    const float margin_ratio = ICON_MARGIN;
+ 
+     const int size   = __MAX(fmt->i_visible_width, fmt->i_visible_height);
+     const int width  = size * size_ratio;
+@@ -213,30 +287,16 @@
+                                        width, height);
+     if (!r)
+         return NULL;
++        
++    if ( size < 4 ) return r;
++    /* In such extreme conditions icon is one of last things to worry about */
+ 
+     if (type == OSD_PAUSE_ICON) {
+-        int bar_width = width / 3;
+-        DrawRect(r, STYLE_FILLED, 0, 0, bar_width - 1, height -1);
+-        DrawRect(r, STYLE_FILLED, width - bar_width, 0, width - 1, height - 1);
++		draw_pause_icon( r, width, height );
+     } else if (type == OSD_PLAY_ICON) {
+-        int mid   = height >> 1;
+-        int delta = (width - mid) >> 1;
+-        int y2    = ((height - 1) >> 1) * 2;
+-        DrawTriangle(r, STYLE_FILLED, delta, 0, width - delta, y2);
++		draw_play_icon( r, width, height );
+     } else {
+-        int mid   = height >> 1;
+-        int delta = (width - mid) >> 1;
+-        int y2    = ((height - 1) >> 1) * 2;
+-        DrawRect(r, STYLE_FILLED, delta, mid / 2, width - delta, height - 1 - mid / 2);
+-        DrawTriangle(r, STYLE_FILLED, width - delta, 0, delta, y2);
+-        if (type == OSD_MUTE_ICON) {
+-            uint8_t *a    = r->p_picture->A_PIXELS;
+-            int     pitch = r->p_picture->A_PITCH;
+-            for (int i = 1; i < pitch; i++) {
+-                int k = i + (height - i - 1) * pitch;
+-                a[k] = 0xff - a[k];
+-            }
+-        }
++    	draw_speaker_icon( r, width, height );
+     }
+     return r;
+ }
+@@ -277,6 +337,7 @@
+ 
+     subpic->i_original_picture_width  = fmt.i_visible_width;
+     subpic->i_original_picture_height = fmt.i_visible_height;
++    cur_color = P_WHITE;
+     if (sys->type == OSD_HOR_SLIDER || sys->type == OSD_VERT_SLIDER)
+         subpic->p_region = OSDSlider(sys->type, sys->position, &fmt);
+     else
