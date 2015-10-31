@@ -21,3 +21,21 @@ General patch works with VLC 2.1+ and tested with 2.2.1.
 Patch is tested for 2.2.1, but, according to VideoLAN git, it works with latest version as well.
 
 I suppose, it should be suitable for use with VLC 3.x too.
+
+# Screenshots
+
+Widgets before:
+
+![old_0](https://raw.github.com/80lin08/vlc-highlight_widgets
+/master/screenshots/old_0.png)
+
+![old_1](https://raw.github.com/80lin08/vlc-highlight_widgets
+/master/screenshots/old_1.png)
+
+Widgets after:
+
+![new_0](https://raw.github.com/80lin08/vlc-highlight_widgets
+/master/screenshots/new_0.png)
+
+![new_1](https://raw.github.com/80lin08/vlc-highlight_widgets
+/master/screenshots/new_1.png)
